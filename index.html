@@ -1,0 +1,285 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#164e94">
+  <title>دفتر خرج</title>
+  <style>
+    :root { font-family: Tahoma, Arial, sans-serif; color: #172438; background: #f0f5fb; }
+    body { max-width: 620px; margin: auto; padding: 16px; line-height: 1.7; }
+    h1, h2 { margin: 0 0 10px; }
+    h2 { font-size: 1.15rem; }
+    form, section { background: white; padding: 16px; border-radius: 14px; margin: 12px 0; }
+    label { display: block; margin: 8px 0; }
+    input, select, button { font: inherit; box-sizing: border-box; min-height: 44px; border-radius: 8px; padding: 8px 10px; }
+    input:not([type=file]), select { display: block; width: 100%; border: 1px solid #9aa9ba; background: white; color: inherit; }
+    button { border: 0; background: #164e94; color: white; cursor: pointer; }
+    .row { display: flex; flex-wrap: wrap; gap: 10px; }
+    .filters label { flex: 1 1 100px; }
+    .totals { background: #edf5ff; border-radius: 8px; padding: 10px; }
+    .totals p { margin: 4px 0; }
+    ul { list-style: none; padding: 0; margin: 10px 0 0; }
+    li { display: flex; justify-content: space-between; align-items: center; gap: 10px; border-top: 1px solid #e1e7ef; padding: 10px 0; }
+    li div { overflow-wrap: anywhere; }
+    small { display: block; color: #44566e; }
+    .delete { background: #9d2930; flex-shrink: 0; }
+    #warning { color: #9d2930; }
+    #status:empty, #warning:empty { display: none; }
+  </style>
+</head>
+<body>
+  <h1>دفتر خرج</h1>
+
+  <form id="entry" autocomplete="off">
+    <h2>ثبت خرج</h2>
+    <label>تاریخ شمسی (سال/ماه/روز)
+      <input id="date" dir="ltr" maxlength="10" required>
+    </label>
+    <label>مبلغ (تومان)
+      <input id="amount" inputmode="numeric" maxlength="24" placeholder="مثلاً ۸۵۰۰۰" required>
+    </label>
+    <label>توضیح (اختیاری)
+      <input id="note" maxlength="120" placeholder="مثلاً خرید نان">
+    </label>
+    <button type="submit">ثبت خرج</button>
+    <p id="status" role="status"></p>
+  </form>
+  <p id="warning" role="alert"></p>
+
+  <section>
+    <h2>گزارش خرج‌ها</h2>
+    <div class="row filters">
+      <label>سال <select id="year"></select></label>
+      <label>ماه <select id="month"></select></label>
+    </div>
+    <div class="totals">
+      <p>جمع ماه: <strong id="monthTotal"></strong></p>
+      <p>جمع کل سال: <strong id="yearTotal"></strong></p>
+    </div>
+    <ul id="list"></ul>
+  </section>
+
+  <section>
+    <h2>پشتیبان</h2>
+    <div class="row">
+      <button id="export" type="button">گرفتن پشتیبان</button>
+      <button id="restore" type="button">برگرداندن پشتیبان</button>
+      <input id="file" type="file" accept=".json,application/json" hidden>
+    </div>
+  </section>
+
+  <script>
+    const $ = id => document.getElementById(id);
+    const key = "daftar-kharj-v1:" + location.pathname.replace(/index\.html$/, "");
+    const months = ["فروردین", "اردیبهشت", "خرداد", "تیر", "مرداد", "شهریور",
+      "مهر", "آبان", "آذر", "دی", "بهمن", "اسفند"];
+    const digits = "۰۱۲۳۴۵۶۷۸۹";
+    const fa = value => String(value).replace(/\d/g, c => digits[c]);
+    const latin = text => text.replace(/[۰-۹]/g, c => digits.indexOf(c))
+      .replace(/[٠-٩]/g, c => "٠١٢٣٤٥٦٧٨٩".indexOf(c));
+    const pad = n => String(n).padStart(2, "0");
+    const dateKey = (y, m, d) => `${y}-${pad(m)}-${pad(d)}`;
+    const showDate = date => fa(date.replace(/-/g, "/"));
+    const money = new Intl.NumberFormat("fa-IR");
+    const calendar = new Intl.DateTimeFormat("fa-IR-u-ca-persian-nu-latn",
+      {year: "numeric", month: "numeric", day: "numeric"});
+
+    function persianParts(date) {
+      const parts = Object.fromEntries(calendar.formatToParts(date).map(p => [p.type, p.value]));
+      return [Number(parts.year), Number(parts.month), Number(parts.day)];
+    }
+
+    function parseDate(text) {
+      const match = /^(\d{4})[\/-](\d{1,2})[\/-](\d{1,2})$/.exec(latin(text.trim()));
+      if (!match) return null;
+      const [y, m, d] = match.slice(1).map(Number);
+      if (y < 1300 || y > 1599 || m < 1 || m > 12 || d < 1) return null;
+      const limit = m <= 6 ? 31 : m <= 11 ? 30 : 29;
+      if (d <= limit) return dateKey(y, m, d);
+      if (m === 12 && d === 30) {
+        // ۳۰ اسفند فقط در سال کبیسه وجود دارد.
+        for (let i = 17; i <= 24; i++) {
+          const [py, pm, pd] = persianParts(new Date(y + 622, 2, i, 12));
+          if (py === y && pm === 12 && pd === 30) return dateKey(y, m, d);
+        }
+      }
+      return null;
+    }
+
+    const today = dateKey(...persianParts(new Date()));
+    const currentYear = today.slice(0, 4);
+    let expenses = [];
+    let askedForPersistence = false;
+    const pack = rows => JSON.stringify({version: 1, expenses: rows});
+
+    function unpack(text) {
+      const data = JSON.parse(text);
+      if (!data || data.version !== 1 || !Array.isArray(data.expenses)) throw new Error();
+      const ids = new Set();
+      for (const x of data.expenses) {
+        if (!x || typeof x.id !== "string" || !x.id || ids.has(x.id) ||
+            typeof x.date !== "string" || parseDate(x.date) !== x.date ||
+            !Number.isSafeInteger(x.amount) || x.amount < 1 ||
+            typeof x.note !== "string" || x.note.length > 120) throw new Error();
+        ids.add(x.id);
+      }
+      return data.expenses;
+    }
+
+    function read() {
+      const saved = localStorage.getItem(key);
+      return saved === null ? [] : unpack(saved);
+    }
+
+    function update(change) {
+      try {
+        const next = change(read());
+        localStorage.setItem(key, pack(next));
+        expenses = next;
+      } catch {
+        alert("تغییر ذخیره نشد. دسترسی به حافظهٔ مرورگر یا فضای خالی گوشی را بررسی کن.");
+        return false;
+      }
+      if (!askedForPersistence) {
+        askedForPersistence = true;
+        navigator.storage?.persist?.().catch(() => {});
+      }
+      return true;
+    }
+
+    function refresh(year = $("year").value || currentYear) {
+      const years = [...new Set([currentYear, year, ...expenses.map(x => x.date.slice(0, 4))])];
+      $("year").replaceChildren(...years.sort().reverse().map(y => new Option(fa(y), y)));
+      $("year").value = year;
+      draw();
+    }
+
+    function draw() {
+      const year = $("year").value;
+      const month = $("month").value;
+      const annual = expenses.filter(x => x.date.startsWith(year + "-"));
+      const monthly = annual.filter(x => x.date.slice(5, 7) === month);
+      const total = rows => money.format(rows.reduce((sum, x) => sum + BigInt(x.amount), 0n)) + " تومان";
+      $("monthTotal").textContent = total(monthly);
+      $("yearTotal").textContent = total(annual);
+
+      const list = $("list");
+      list.replaceChildren();
+      if (!monthly.length) {
+        const empty = document.createElement("li");
+        empty.textContent = "برای این ماه هنوز خرجی ثبت نشده.";
+        list.append(empty);
+      }
+      for (const x of monthly.reverse().sort((a, b) => b.date.localeCompare(a.date))) {
+        const row = document.createElement("li");
+        const text = document.createElement("div");
+        text.textContent = `${money.format(x.amount)} تومان${x.note ? " — " + x.note : ""}`;
+        const date = document.createElement("small");
+        date.textContent = showDate(x.date);
+        text.append(date);
+
+        const remove = document.createElement("button");
+        remove.type = "button";
+        remove.className = "delete";
+        remove.textContent = "حذف";
+        remove.onclick = () => {
+          if (confirm("این خرج حذف شود؟") && update(rows => rows.filter(r => r.id !== x.id))) {
+            refresh();
+            $("status").textContent = "خرج حذف شد.";
+          }
+        };
+        row.append(text, remove);
+        list.append(row);
+      }
+    }
+
+    $("entry").onsubmit = event => {
+      event.preventDefault();
+      const date = parseDate($("date").value);
+      const text = latin($("amount").value).replace(/[\s,،٬]/g, "");
+      const amount = Number(text);
+
+      if (!date) {
+        alert("تاریخ شمسی را مثل ۱۴۰۴/۰۷/۰۱ وارد کن.");
+        $("date").focus();
+        return;
+      }
+      if (!/^\d+$/.test(text) || !Number.isSafeInteger(amount) || amount < 1) {
+        alert("مبلغ را به‌صورت عدد صحیح و بیشتر از صفر وارد کن.");
+        $("amount").focus();
+        return;
+      }
+
+      const id = crypto.randomUUID?.() ?? `${Date.now()}-${Math.random()}`;
+      const note = $("note").value.trim();
+      if (!update(rows => [...rows, {id, date, amount, note}])) return;
+
+      $("amount").value = "";
+      $("note").value = "";
+      $("month").value = date.slice(5, 7);
+      refresh(date.slice(0, 4));
+      $("status").textContent = "خرج ثبت شد.";
+    };
+
+    $("export").onclick = () => {
+      let rows;
+      try { rows = read(); }
+      catch { alert("خواندن اطلاعات برای گرفتن پشتیبان ممکن نبود."); return; }
+
+      const link = document.createElement("a");
+      const url = URL.createObjectURL(new Blob([pack(rows)], {type: "application/json"}));
+      link.href = url;
+      link.download = `kharj-${dateKey(...persianParts(new Date()))}.json`;
+      document.body.append(link);
+      link.click();
+      link.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 10000);
+    };
+
+    $("restore").onclick = () => $("file").click();
+    $("file").onchange = async () => {
+      const file = $("file").files[0];
+      $("file").value = "";
+      if (!file) return;
+
+      let backup;
+      try { backup = unpack(await file.text()); }
+      catch { alert("این فایل، پشتیبان معتبر دفتر خرج نیست."); return; }
+
+      if (!confirm("خرج‌های این پشتیبان اضافه شوند؟ خرج‌های فعلی پاک نمی‌شوند.")) return;
+      let added = 0;
+      if (update(rows => {
+        const ids = new Set(rows.map(x => x.id));
+        const missing = backup.filter(x => !ids.has(x.id));
+        added = missing.length;
+        return [...rows, ...missing];
+      })) {
+        refresh();
+        alert(added ? `${fa(added)} خرج اضافه شد. از بخش گزارش، ماه و سال را انتخاب کن.` :
+          "خرج جدیدی در این پشتیبان نبود.");
+      }
+    };
+
+    function load() {
+      try {
+        expenses = read();
+        $("warning").textContent = "";
+      } catch {
+        $("warning").textContent = "خواندن حافظه ممکن نبود. اطلاعات قبلی بازنویسی نمی‌شود.";
+      }
+      refresh();
+    }
+
+    $("date").value = showDate(today);
+    $("month").append(...months.map((name, i) => new Option(name, pad(i + 1))));
+    $("month").value = today.slice(5, 7);
+    $("year").onchange = draw;
+    $("month").onchange = draw;
+    window.addEventListener("storage", event => {
+      if (event.key === key || event.key === null) load();
+    });
+    load();
+  </script>
+</body>
+</html>
