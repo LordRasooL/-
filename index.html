@@ -4,13 +4,26 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#164e94">
+
   <title>دفتر مالی من</title>
+
+  <link rel="manifest" href="./manifest.json">
+  <link rel="icon" href="./icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="./icon.svg">
+
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="دفتر مالی">
 
   <style>
     :root {
       font-family: Tahoma, Arial, sans-serif;
       color: #172438;
       background: #f0f5fb;
+    }
+
+    * {
+      box-sizing: border-box;
     }
 
     body {
@@ -20,20 +33,28 @@
       line-height: 1.7;
     }
 
-    h1, h2 {
-      margin: 0 0 10px;
+    h1,
+    h2,
+    h3 {
+      margin-top: 0;
+    }
+
+    h1 {
+      margin-bottom: 5px;
     }
 
     h2 {
       font-size: 1.15rem;
+      margin-bottom: 10px;
     }
 
-    form, section {
+    form,
+    section {
       background: white;
       padding: 16px;
       border-radius: 16px;
       margin: 12px 0;
-      box-shadow: 0 3px 14px rgba(20, 50, 90, 0.06);
+      box-shadow: 0 3px 14px rgba(20, 50, 90, 0.07);
     }
 
     label {
@@ -41,15 +62,17 @@
       margin: 10px 0;
     }
 
-    input, select, button {
+    input,
+    select,
+    button {
       font: inherit;
-      box-sizing: border-box;
-      min-height: 44px;
+      min-height: 45px;
       border-radius: 9px;
       padding: 8px 10px;
     }
 
-    input:not([type=file]), select {
+    input:not([type="file"]),
+    select {
       display: block;
       width: 100%;
       border: 1px solid #9aa9ba;
@@ -101,7 +124,7 @@
     }
 
     .summary-box h3 {
-      margin: 0 0 8px;
+      margin-bottom: 8px;
       font-size: 1rem;
     }
 
@@ -119,6 +142,14 @@
 
     .balance-text {
       color: #164e94;
+    }
+
+    .negative-balance {
+      color: #b3262e;
+    }
+
+    .positive-balance {
+      color: #08783e;
     }
 
     ul {
@@ -172,6 +203,15 @@
       flex-shrink: 0;
     }
 
+    .help {
+      color: #52647a;
+      font-size: 0.9rem;
+    }
+
+    #status {
+      color: #08783e;
+    }
+
     #warning {
       color: #9d2930;
       background: #fff1f1;
@@ -179,18 +219,27 @@
       border-radius: 10px;
     }
 
-    #status {
+    #connectionStatus {
+      display: inline-block;
+      font-size: 0.85rem;
+      padding: 3px 10px;
+      border-radius: 20px;
+      margin-bottom: 8px;
+    }
+
+    .online {
       color: #08783e;
+      background: #e8f7ef;
+    }
+
+    .offline {
+      color: #8a5000;
+      background: #fff3d8;
     }
 
     #status:empty,
     #warning:empty {
       display: none;
-    }
-
-    .help {
-      color: #52647a;
-      font-size: 0.9rem;
     }
 
     @media (min-width: 560px) {
@@ -204,8 +253,12 @@
 <body>
 
   <h1>دفتر مالی من</h1>
+
+  <div id="connectionStatus"></div>
+
   <p class="help">
-    درآمدها و خرج‌های روزانه‌ات را ثبت کن و گزارش ماهانه و سالانه ببین.
+    درآمدها و خرج‌ها را ثبت کن و گزارش ماهانه و سالانه ببین.
+    این برنامه پس از اولین بار، بدون اینترنت هم اجرا می‌شود.
   </p>
 
   <form id="entry" autocomplete="off">
@@ -220,12 +273,18 @@
     </label>
 
     <label>
-      تاریخ شمسی (سال/ماه/روز)
-      <input id="date" dir="ltr" maxlength="10" required>
+      تاریخ شمسی
+      <input
+        id="date"
+        dir="ltr"
+        maxlength="10"
+        placeholder="۱۴۰۴/۰۱/۰۱"
+        required
+      >
     </label>
 
     <label>
-      مبلغ (تومان)
+      مبلغ به تومان
       <input
         id="amount"
         inputmode="numeric"
@@ -244,7 +303,10 @@
       >
     </label>
 
-    <button id="submitButton" type="submit">ثبت خرج</button>
+    <button id="submitButton" type="submit">
+      ثبت خرج
+    </button>
+
     <p id="status" role="status"></p>
   </form>
 
@@ -266,7 +328,6 @@
     </div>
 
     <div class="summary">
-
       <div class="summary-box monthly">
         <h3>گزارش ماه انتخاب‌شده</h3>
 
@@ -304,10 +365,12 @@
           <strong id="yearBalance"></strong>
         </p>
       </div>
-
     </div>
 
-    <h2 style="margin-top:18px">تراکنش‌های ماه</h2>
+    <h2 style="margin-top:18px">
+      تراکنش‌های ماه
+    </h2>
+
     <ul id="list"></ul>
   </section>
 
@@ -315,12 +378,17 @@
     <h2>پشتیبان‌گیری</h2>
 
     <p class="help">
-      برای جلوگیری از حذف اطلاعات، هر چند وقت یک‌بار فایل پشتیبان بگیر و آن را در جای امن نگهداری کن.
+      برای اطمینان، هر چند وقت یک‌بار فایل پشتیبان بگیر و در جای امن نگهداری کن.
     </p>
 
     <div class="row">
-      <button id="export" type="button">گرفتن پشتیبان</button>
-      <button id="restore" type="button">برگرداندن پشتیبان</button>
+      <button id="export" type="button">
+        گرفتن پشتیبان
+      </button>
+
+      <button id="restore" type="button">
+        برگرداندن پشتیبان
+      </button>
 
       <input
         id="file"
@@ -335,11 +403,11 @@
     const $ = id => document.getElementById(id);
 
     /*
-      این کلید عمداً با نسخه قبلی یکسان نگه داشته شده
-      تا خرج‌های قبلی کاربر پاک نشوند.
+      این کلید با نسخه قبلی یکسان است تا اطلاعات قبلی حفظ شوند.
     */
     const storageKey =
-      "daftar-kharj-v1:" + location.pathname.replace(/index\.html$/, "");
+      "daftar-kharj-v1:" +
+      location.pathname.replace(/index\.html$/, "");
 
     const months = [
       "فروردین",
@@ -360,14 +428,24 @@
     const arabicDigits = "٠١٢٣٤٥٦٧٨٩";
 
     const toPersian = value =>
-      String(value).replace(/\d/g, digit => persianDigits[digit]);
+      String(value).replace(
+        /\d/g,
+        digit => persianDigits[digit]
+      );
 
     const toLatin = value =>
       String(value)
-        .replace(/[۰-۹]/g, digit => persianDigits.indexOf(digit))
-        .replace(/[٠-٩]/g, digit => arabicDigits.indexOf(digit));
+        .replace(
+          /[۰-۹]/g,
+          digit => persianDigits.indexOf(digit)
+        )
+        .replace(
+          /[٠-٩]/g,
+          digit => arabicDigits.indexOf(digit)
+        );
 
-    const pad = number => String(number).padStart(2, "0");
+    const pad = number =>
+      String(number).padStart(2, "0");
 
     const makeDateKey = (year, month, day) =>
       `${year}-${pad(month)}-${pad(day)}`;
@@ -375,16 +453,18 @@
     const showDate = date =>
       toPersian(date.replace(/-/g, "/"));
 
-    const moneyFormatter = new Intl.NumberFormat("fa-IR");
+    const moneyFormatter =
+      new Intl.NumberFormat("fa-IR");
 
-    const persianCalendar = new Intl.DateTimeFormat(
-      "fa-IR-u-ca-persian-nu-latn",
-      {
-        year: "numeric",
-        month: "numeric",
-        day: "numeric"
-      }
-    );
+    const persianCalendar =
+      new Intl.DateTimeFormat(
+        "fa-IR-u-ca-persian-nu-latn",
+        {
+          year: "numeric",
+          month: "numeric",
+          day: "numeric"
+        }
+      );
 
     let transactions = [];
     let askedForPersistence = false;
@@ -404,8 +484,9 @@
     }
 
     function parsePersianDate(text) {
-      const match = /^(\d{4})[\/-](\d{1,2})[\/-](\d{1,2})$/
-        .exec(toLatin(text.trim()));
+      const match =
+        /^(\d{4})[\/-](\d{1,2})[\/-](\d{1,2})$/
+          .exec(toLatin(text.trim()));
 
       if (!match) return null;
 
@@ -423,9 +504,11 @@
       }
 
       const normalLimit =
-        month <= 6 ? 31 :
-        month <= 11 ? 30 :
-        29;
+        month <= 6
+          ? 31
+          : month <= 11
+            ? 30
+            : 29;
 
       if (day <= normalLimit) {
         return makeDateKey(year, month, day);
@@ -435,13 +518,31 @@
         بررسی ۳۰ اسفند در سال کبیسه
       */
       if (month === 12 && day === 30) {
-        for (let gregorianDay = 17; gregorianDay <= 24; gregorianDay++) {
-          const [py, pm, pd] = persianDateParts(
-            new Date(year + 622, 2, gregorianDay, 12)
-          );
+        for (
+          let gregorianDay = 17;
+          gregorianDay <= 24;
+          gregorianDay++
+        ) {
+          const [py, pm, pd] =
+            persianDateParts(
+              new Date(
+                year + 622,
+                2,
+                gregorianDay,
+                12
+              )
+            );
 
-          if (py === year && pm === 12 && pd === 30) {
-            return makeDateKey(year, month, day);
+          if (
+            py === year &&
+            pm === 12 &&
+            pd === 30
+          ) {
+            return makeDateKey(
+              year,
+              month,
+              day
+            );
           }
         }
       }
@@ -450,16 +551,22 @@
     }
 
     const today =
-      makeDateKey(...persianDateParts(new Date()));
+      makeDateKey(
+        ...persianDateParts(new Date())
+      );
 
-    const currentYear = today.slice(0, 4);
+    const currentYear =
+      today.slice(0, 4);
 
     function validateTransaction(item) {
       return (
         item &&
         typeof item.id === "string" &&
         item.id.length > 0 &&
-        (item.type === "income" || item.type === "expense") &&
+        (
+          item.type === "income" ||
+          item.type === "expense"
+        ) &&
         typeof item.date === "string" &&
         parsePersianDate(item.date) === item.date &&
         Number.isSafeInteger(item.amount) &&
@@ -470,9 +577,7 @@
     }
 
     /*
-      نسخه قبلی برنامه فقط expenses داشت.
-      این تابع فایل‌ها و اطلاعات نسخه قبلی را هم قبول می‌کند
-      و همه را به‌عنوان خرج تبدیل می‌کند.
+      پشتیبانی از نسخه قدیمی که فقط خرج داشت.
     */
     function unpack(text) {
       const data = JSON.parse(text);
@@ -524,7 +629,8 @@
     }
 
     function readStorage() {
-      const saved = localStorage.getItem(storageKey);
+      const saved =
+        localStorage.getItem(storageKey);
 
       if (saved === null) {
         return [];
@@ -536,7 +642,8 @@
     function updateStorage(changeFunction) {
       try {
         const currentRows = readStorage();
-        const nextRows = changeFunction(currentRows);
+        const nextRows =
+          changeFunction(currentRows);
 
         localStorage.setItem(
           storageKey,
@@ -567,31 +674,42 @@
       return rows
         .filter(item => item.type === type)
         .reduce(
-          (sum, item) => sum + BigInt(item.amount),
+          (sum, item) =>
+            sum + BigInt(item.amount),
           0n
         );
     }
 
     function formatMoney(value) {
-      return moneyFormatter.format(value) + " تومان";
+      return (
+        moneyFormatter.format(value) +
+        " تومان"
+      );
     }
 
     function formatBalance(income, expense) {
       const balance = income - expense;
 
       if (balance > 0n) {
-        return formatMoney(balance) + " مثبت";
+        return (
+          formatMoney(balance) +
+          " مثبت"
+        );
       }
 
       if (balance < 0n) {
-        return formatMoney(balance) + " منفی";
+        return (
+          formatMoney(-balance) +
+          " منفی"
+        );
       }
 
       return "۰ تومان";
     }
 
     function refreshYears(
-      selectedYear = $("year").value || currentYear
+      selectedYear =
+        $("year").value || currentYear
     ) {
       const availableYears = [
         ...new Set([
@@ -609,7 +727,11 @@
 
       $("year").replaceChildren(
         ...availableYears.map(
-          year => new Option(toPersian(year), year)
+          year =>
+            new Option(
+              toPersian(year),
+              year
+            )
         )
       );
 
@@ -619,28 +741,49 @@
     }
 
     function drawReport() {
-      const selectedYear = $("year").value;
-      const selectedMonth = $("month").value;
+      const selectedYear =
+        $("year").value;
 
-      const yearlyRows = transactions.filter(
-        item => item.date.startsWith(selectedYear + "-")
-      );
+      const selectedMonth =
+        $("month").value;
 
-      const monthlyRows = yearlyRows.filter(
-        item => item.date.slice(5, 7) === selectedMonth
-      );
+      const yearlyRows =
+        transactions.filter(item =>
+          item.date.startsWith(
+            selectedYear + "-"
+          )
+        );
+
+      const monthlyRows =
+        yearlyRows.filter(
+          item =>
+            item.date.slice(5, 7) ===
+            selectedMonth
+        );
 
       const monthIncome =
-        sumTransactions(monthlyRows, "income");
+        sumTransactions(
+          monthlyRows,
+          "income"
+        );
 
       const monthExpense =
-        sumTransactions(monthlyRows, "expense");
+        sumTransactions(
+          monthlyRows,
+          "expense"
+        );
 
       const yearIncome =
-        sumTransactions(yearlyRows, "income");
+        sumTransactions(
+          yearlyRows,
+          "income"
+        );
 
       const yearExpense =
-        sumTransactions(yearlyRows, "expense");
+        sumTransactions(
+          yearlyRows,
+          "expense"
+        );
 
       $("monthIncome").textContent =
         formatMoney(monthIncome);
@@ -649,7 +792,10 @@
         formatMoney(monthExpense);
 
       $("monthBalance").textContent =
-        formatBalance(monthIncome, monthExpense);
+        formatBalance(
+          monthIncome,
+          monthExpense
+        );
 
       $("yearIncome").textContent =
         formatMoney(yearIncome);
@@ -658,7 +804,20 @@
         formatMoney(yearExpense);
 
       $("yearBalance").textContent =
-        formatBalance(yearIncome, yearExpense);
+        formatBalance(
+          yearIncome,
+          yearExpense
+        );
+
+      $("monthBalance").className =
+        monthIncome >= monthExpense
+          ? "positive-balance"
+          : "negative-balance";
+
+      $("yearBalance").className =
+        yearIncome >= yearExpense
+          ? "positive-balance"
+          : "negative-balance";
 
       drawTransactionList(monthlyRows);
     }
@@ -668,7 +827,8 @@
       list.replaceChildren();
 
       if (!rows.length) {
-        const emptyItem = document.createElement("li");
+        const emptyItem =
+          document.createElement("li");
 
         emptyItem.textContent =
           "برای این ماه هنوز درآمد یا خرجی ثبت نشده.";
@@ -678,10 +838,15 @@
       }
 
       const sortedRows = rows
-        .map((item, index) => ({ item, index }))
+        .map((item, index) => ({
+          item,
+          index
+        }))
         .sort((a, b) => {
           const dateCompare =
-            b.item.date.localeCompare(a.item.date);
+            b.item.date.localeCompare(
+              a.item.date
+            );
 
           if (dateCompare !== 0) {
             return dateCompare;
@@ -691,25 +856,43 @@
         })
         .map(row => row.item);
 
-      for (const transaction of sortedRows) {
-        const row = document.createElement("li");
-        const information = document.createElement("div");
-        const title = document.createElement("div");
-        const badge = document.createElement("span");
-        const amount = document.createElement("span");
-        const details = document.createElement("small");
-        const removeButton = document.createElement("button");
+      for (
+        const transaction of sortedRows
+      ) {
+        const row =
+          document.createElement("li");
+
+        const information =
+          document.createElement("div");
+
+        const title =
+          document.createElement("div");
+
+        const badge =
+          document.createElement("span");
+
+        const amount =
+          document.createElement("span");
+
+        const details =
+          document.createElement("small");
+
+        const removeButton =
+          document.createElement("button");
 
         const isIncome =
           transaction.type === "income";
 
-        title.className = "transaction-title";
+        title.className =
+          "transaction-title";
 
         badge.className =
           "badge " +
-          (isIncome
-            ? "income-badge"
-            : "expense-badge");
+          (
+            isIncome
+              ? "income-badge"
+              : "expense-badge"
+          );
 
         badge.textContent =
           isIncome ? "درآمد" : "خرج";
@@ -732,7 +915,10 @@
         details.textContent =
           `${showDate(transaction.date)} — ${noteText}`;
 
-        information.append(title, details);
+        information.append(
+          title,
+          details
+        );
 
         removeButton.type = "button";
         removeButton.className = "delete";
@@ -742,21 +928,32 @@
           const transactionName =
             isIncome ? "درآمد" : "خرج";
 
+          const confirmed =
+            confirm(
+              `این ${transactionName} حذف شود؟`
+            );
+
           if (
-            confirm(`این ${transactionName} حذف شود؟`) &&
+            confirmed &&
             updateStorage(currentRows =>
               currentRows.filter(
-                item => item.id !== transaction.id
+                item =>
+                  item.id !== transaction.id
               )
             )
           ) {
             refreshYears();
+
             $("status").textContent =
               `${transactionName} حذف شد.`;
           }
         };
 
-        row.append(information, removeButton);
+        row.append(
+          information,
+          removeButton
+        );
+
         list.append(row);
       }
     }
@@ -766,27 +963,36 @@
         $("type").value === "income";
 
       $("submitButton").textContent =
-        isIncome ? "ثبت درآمد" : "ثبت خرج";
+        isIncome
+          ? "ثبت درآمد"
+          : "ثبت خرج";
 
       $("note").placeholder =
         isIncome
           ? "مثلاً حقوق، فروش یا دستمزد"
-          : "مثلاً خرید مواد غذایی یا کرایه";
+          : "مثلاً خرید، کرایه یا مواد غذایی";
     };
 
     $("entry").onsubmit = event => {
       event.preventDefault();
 
       const type = $("type").value;
+
       const date =
-        parsePersianDate($("date").value);
+        parsePersianDate(
+          $("date").value
+        );
 
-      const amountText = toLatin(
-        $("amount").value
-      ).replace(/[\s,،٬]/g, "");
+      const amountText =
+        toLatin(
+          $("amount").value
+        ).replace(/[\s,،٬]/g, "");
 
-      const amount = Number(amountText);
-      const note = $("note").value.trim();
+      const amount =
+        Number(amountText);
+
+      const note =
+        $("note").value.trim();
 
       if (!date) {
         alert(
@@ -807,15 +1013,6 @@
         );
 
         $("amount").focus();
-        return;
-      }
-
-      if (note.length > 200) {
-        alert(
-          "توضیحات نباید بیشتر از ۲۰۰ حرف باشد."
-        );
-
-        $("note").focus();
         return;
       }
 
@@ -871,13 +1068,18 @@
         return;
       }
 
-      const backupFile = new Blob(
-        [pack(rows)],
-        { type: "application/json" }
-      );
+      const backupFile =
+        new Blob(
+          [pack(rows)],
+          {
+            type: "application/json"
+          }
+        );
 
       const url =
-        URL.createObjectURL(backupFile);
+        URL.createObjectURL(
+          backupFile
+        );
 
       const link =
         document.createElement("a");
@@ -886,7 +1088,9 @@
 
       link.download =
         `daftar-mali-${makeDateKey(
-          ...persianDateParts(new Date())
+          ...persianDateParts(
+            new Date()
+          )
         )}.json`;
 
       document.body.append(link);
@@ -904,7 +1108,9 @@
     };
 
     $("file").onchange = async () => {
-      const file = $("file").files[0];
+      const file =
+        $("file").files[0];
+
       $("file").value = "";
 
       if (!file) return;
@@ -930,25 +1136,29 @@
 
       let addedCount = 0;
 
-      const successful = updateStorage(
-        currentRows => {
-          const currentIds = new Set(
-            currentRows.map(item => item.id)
-          );
+      const successful =
+        updateStorage(currentRows => {
+          const currentIds =
+            new Set(
+              currentRows.map(
+                item => item.id
+              )
+            );
 
           const missingRows =
             backupRows.filter(
-              item => !currentIds.has(item.id)
+              item =>
+                !currentIds.has(item.id)
             );
 
-          addedCount = missingRows.length;
+          addedCount =
+            missingRows.length;
 
           return [
             ...currentRows,
             ...missingRows
           ];
-        }
-      );
+        });
 
       if (successful) {
         refreshYears();
@@ -965,6 +1175,23 @@
       }
     };
 
+    function updateConnectionStatus() {
+      const status =
+        $("connectionStatus");
+
+      if (navigator.onLine) {
+        status.textContent =
+          "اینترنت متصل است";
+
+        status.className = "online";
+      } else {
+        status.textContent =
+          "حالت آفلاین فعال است";
+
+        status.className = "offline";
+      }
+    }
+
     function loadApplication() {
       transactions = [];
 
@@ -977,6 +1204,31 @@
       }
 
       refreshYears();
+    }
+
+    /*
+      فعال‌سازی حالت آفلاین
+    */
+    if ("serviceWorker" in navigator) {
+      window.addEventListener(
+        "load",
+        async () => {
+          try {
+            const registration =
+              await navigator.serviceWorker.register(
+                "./sw.js"
+              );
+
+            registration.update()
+              .catch(() => {});
+          } catch (error) {
+            console.error(
+              "فعال‌سازی آفلاین ناموفق بود:",
+              error
+            );
+          }
+        }
+      );
     }
 
     $("date").value =
@@ -1002,6 +1254,16 @@
       drawReport;
 
     window.addEventListener(
+      "online",
+      updateConnectionStatus
+    );
+
+    window.addEventListener(
+      "offline",
+      updateConnectionStatus
+    );
+
+    window.addEventListener(
       "storage",
       event => {
         if (
@@ -1017,6 +1279,7 @@
       new Event("change")
     );
 
+    updateConnectionStatus();
     loadApplication();
   </script>
 
