@@ -1,0 +1,28 @@
+{
+  "id": "./",
+  "name": "دفتر مالی من",
+  "short_name": "دفتر مالی",
+  "description": "ثبت درآمدها و خرج‌های ماهانه و سالانه",
+  "lang": "fa",
+  "dir": "rtl",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#f0f5fb",
+  "theme_color": "#164e94",
+  "icons": [
+    {
+      "src": "./icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "./icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    }
+  ]
+}
